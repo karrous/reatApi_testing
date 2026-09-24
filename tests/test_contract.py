@@ -1,51 +1,59 @@
 """Cross-resource contract tests, parametrized over all six resources."""
-import pytest
 
-from conftest import RESOURCES
+import pytest
+from jsonschema.validators import validator_for
+
+from data import COUNTS, RESOURCES
+from helpers import assert_status, get_json
+from schemas import SCHEMAS
 
 pytestmark = pytest.mark.contract
 
 
 @pytest.mark.parametrize("resource", RESOURCES)
-def test_list_returns_200_and_non_empty_array(api_client, resource):
-    resp = api_client.get(f"/{resource}")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert isinstance(body, list)
-    assert len(body) > 0
+def test_list_returns_documented_number_of_items(fetch_list, resource):
+    assert len(fetch_list(resource)) == COUNTS[resource]
 
 
 @pytest.mark.parametrize("resource", RESOURCES)
-def test_get_by_id_returns_200_and_matching_id(api_client, resource):
-    resp = api_client.get(f"/{resource}/1")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert isinstance(body, dict)
+def test_list_ids_are_unique(fetch_list, resource):
+    ids = [item["id"] for item in fetch_list(resource)]
+    assert len(ids) == len(set(ids))
+
+
+@pytest.mark.schema
+@pytest.mark.parametrize("resource", RESOURCES)
+def test_list_items_match_schema(fetch_list, resource):
+    # Build the validator once: validate() re-checks the schema on every call (5000 photos).
+    schema = SCHEMAS[resource]
+    validator = validator_for(schema)(schema)
+    for item in fetch_list(resource):
+        validator.validate(item)
+
+
+@pytest.mark.schema
+@pytest.mark.parametrize("resource", RESOURCES)
+def test_get_by_id_returns_matching_item_that_matches_schema(api_client, resource):
+    body = get_json(api_client.get(f"/{resource}/1"))
+    schema = SCHEMAS[resource]
+    validator_for(schema)(schema).validate(body)
     assert body["id"] == 1
+
+
+@pytest.mark.parametrize("resource", RESOURCES)
+def test_get_by_id_equals_item_in_list(api_client, fetch_list, resource):
+    item = fetch_list(resource)[0]
+    assert get_json(api_client.get(f"/{resource}/{item['id']}")) == item
 
 
 @pytest.mark.negative
 @pytest.mark.parametrize("resource", RESOURCES)
 def test_get_nonexistent_id_returns_404(api_client, resource):
-    resp = api_client.get(f"/{resource}/999999")
-    assert resp.status_code == 404
+    assert_status(api_client.get(f"/{resource}/999999"), 404)
 
 
 @pytest.mark.parametrize("resource", RESOURCES)
 def test_responses_are_json(api_client, resource):
     resp = api_client.get(f"/{resource}/1")
+    assert_status(resp, 200)
     assert resp.headers["Content-Type"].startswith("application/json")
-
-
-@pytest.mark.parametrize("resource", RESOURCES)
-def test_list_ids_are_unique(api_client, resource):
-    ids = [item["id"] for item in api_client.get(f"/{resource}").json()]
-    assert len(ids) == len(set(ids))
-
-
-@pytest.mark.parametrize(
-    "resource, expected_count",
-    [("posts", 100), ("comments", 500), ("albums", 100), ("photos", 5000), ("todos", 200), ("users", 10)],
-)
-def test_list_returns_documented_number_of_items(api_client, resource, expected_count):
-    assert len(api_client.get(f"/{resource}").json()) == expected_count

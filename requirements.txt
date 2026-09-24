@@ -1,4 +1,6 @@
-requests>=2.31
-pytest>=8.0
-jsonschema>=4.21
-pytest-html>=4.1
+requests==2.34.2
+urllib3==2.8.0
+pytest==9.1.1
+pytest-html==4.2.0
+jsonschema==4.26.0
+ruff==0.14.0

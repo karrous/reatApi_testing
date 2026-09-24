@@ -1,62 +1,101 @@
-"""JSON schemas for the resources with full response-shape validation."""
+"""JSON schemas for all six resources.
 
-POST_SCHEMA = {
-    "type": "object",
-    "properties": {
+Every object sets additionalProperties: False, so an unexpected new field in
+the API response fails the test instead of slipping through.
+"""
+
+EMAIL = {"type": "string", "pattern": r"^[^@\s]+@[^@\s]+\.[^@\s]+$"}
+URL = {"type": "string", "pattern": r"^https?://"}
+
+
+def _object(properties: dict) -> dict:
+    """Strict object schema: all listed properties required, no extras allowed."""
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": list(properties),
+        "additionalProperties": False,
+    }
+
+
+POST_SCHEMA = _object(
+    {
         "userId": {"type": "integer"},
         "id": {"type": "integer"},
         "title": {"type": "string"},
         "body": {"type": "string"},
-    },
-    "required": ["userId", "id", "title", "body"],
-    "additionalProperties": False,
-}
+    }
+)
 
-COMMENT_SCHEMA = {
-    "type": "object",
-    "properties": {
+COMMENT_SCHEMA = _object(
+    {
         "postId": {"type": "integer"},
         "id": {"type": "integer"},
         "name": {"type": "string"},
-        "email": {"type": "string", "pattern": r"^[^@\s]+@[^@\s]+$"},
+        "email": EMAIL,
         "body": {"type": "string"},
-    },
-    "required": ["postId", "id", "name", "email", "body"],
-}
+    }
+)
 
-USER_SCHEMA = {
-    "type": "object",
-    "properties": {
+ALBUM_SCHEMA = _object(
+    {
+        "userId": {"type": "integer"},
+        "id": {"type": "integer"},
+        "title": {"type": "string"},
+    }
+)
+
+PHOTO_SCHEMA = _object(
+    {
+        "albumId": {"type": "integer"},
+        "id": {"type": "integer"},
+        "title": {"type": "string"},
+        "url": URL,
+        "thumbnailUrl": URL,
+    }
+)
+
+TODO_SCHEMA = _object(
+    {
+        "userId": {"type": "integer"},
+        "id": {"type": "integer"},
+        "title": {"type": "string"},
+        "completed": {"type": "boolean"},
+    }
+)
+
+USER_SCHEMA = _object(
+    {
         "id": {"type": "integer"},
         "name": {"type": "string"},
         "username": {"type": "string"},
-        "email": {"type": "string", "pattern": r"^[^@\s]+@[^@\s]+$"},
-        "address": {
-            "type": "object",
-            "properties": {
+        "email": EMAIL,
+        "address": _object(
+            {
                 "street": {"type": "string"},
                 "suite": {"type": "string"},
                 "city": {"type": "string"},
                 "zipcode": {"type": "string"},
-                "geo": {
-                    "type": "object",
-                    "properties": {"lat": {"type": "string"}, "lng": {"type": "string"}},
-                    "required": ["lat", "lng"],
-                },
-            },
-            "required": ["street", "suite", "city", "zipcode", "geo"],
-        },
+                "geo": _object({"lat": {"type": "string"}, "lng": {"type": "string"}}),
+            }
+        ),
         "phone": {"type": "string"},
         "website": {"type": "string"},
-        "company": {
-            "type": "object",
-            "properties": {
+        "company": _object(
+            {
                 "name": {"type": "string"},
                 "catchPhrase": {"type": "string"},
                 "bs": {"type": "string"},
-            },
-            "required": ["name", "catchPhrase", "bs"],
-        },
-    },
-    "required": ["id", "name", "username", "email", "address", "phone", "website", "company"],
+            }
+        ),
+    }
+)
+
+SCHEMAS = {
+    "posts": POST_SCHEMA,
+    "comments": COMMENT_SCHEMA,
+    "albums": ALBUM_SCHEMA,
+    "photos": PHOTO_SCHEMA,
+    "todos": TODO_SCHEMA,
+    "users": USER_SCHEMA,
 }
