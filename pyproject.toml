@@ -1,0 +1,28 @@
+[project]
+name = "jsonplaceholder-api-tests"
+version = "0.1.0"
+description = "Automated API test suite for the JSONPlaceholder REST API"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra --strict-markers"
+markers = [
+    "smoke: fast sanity check that the API is reachable and responsive",
+    "contract: cross-resource contract checks",
+    "negative: negative / invalid-input scenarios",
+    "schema: JSON schema validation",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "PT"]
+# Strings like "path, params" are the established parametrize style here.
+ignore = ["PT006"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["api_client", "data", "helpers", "schemas"]
